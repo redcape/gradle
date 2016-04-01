@@ -22,9 +22,11 @@ import org.gradle.tooling.connection.GradleConnection
 import org.gradle.tooling.connection.GradleConnectionBuilder
 import org.gradle.tooling.connection.ModelResult
 import org.gradle.util.GradleVersion
+import org.junit.runner.RunWith
 
 @ToolingApiVersion(ToolingApiVersions.SUPPORTS_COMPOSITE_BUILD)
 @TargetGradleVersion(">=1.0")
+@RunWith(CompositeToolingApiCompatibilitySuiteRunner)
 abstract class CompositeToolingApiSpecification extends AbstractToolingApiSpecification {
     boolean integratedComposite = true
 
