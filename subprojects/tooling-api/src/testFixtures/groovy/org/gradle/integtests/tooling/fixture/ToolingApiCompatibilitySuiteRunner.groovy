@@ -15,19 +15,10 @@
  */
 package org.gradle.integtests.tooling.fixture
 
-import org.gradle.api.specs.Spec
-import org.gradle.api.specs.Specs
 import org.gradle.integtests.fixtures.AbstractCompatibilityTestRunner
-import org.gradle.integtests.fixtures.AbstractMultiTestRunner
 import org.gradle.integtests.fixtures.executer.GradleDistribution
-import org.gradle.internal.classloader.ClasspathUtil
-import org.gradle.internal.os.OperatingSystem
-import org.gradle.util.GradleVersion
-import spock.lang.Unroll
 
 class ToolingApiCompatibilitySuiteRunner extends AbstractCompatibilityTestRunner {
-    private static final Map<String, ClassLoader> TEST_CLASS_LOADERS = [:]
-
     ToolingApiCompatibilitySuiteRunner(Class<? extends ToolingApiSpecification> target) {
         super(target)
     }
@@ -50,87 +41,9 @@ class ToolingApiCompatibilitySuiteRunner extends AbstractCompatibilityTestRunner
         }
     }
 
-    private class Permutation extends AbstractMultiTestRunner.Execution implements ToolingApiClasspathProvider {
-        final ToolingApiDistribution toolingApi
-        final GradleDistribution gradle
-
+    private class Permutation extends AbstractToolingApiExecution {
         Permutation(ToolingApiDistribution toolingApi, GradleDistribution gradle) {
-            this.toolingApi = toolingApi
-            this.gradle = gradle
-        }
-
-        @Override
-        protected String getDisplayName() {
-            return "${displayName(toolingApi.version)} -> ${displayName(gradle.version)}"
-        }
-
-        @Override
-        String toString() {
-            return displayName
-        }
-
-        private String displayName(GradleVersion version) {
-            if (version == GradleVersion.current()) {
-                return "current"
-            }
-            return version.version
-        }
-
-        @Override
-        protected boolean isTestEnabled(AbstractMultiTestRunner.TestDetails testDetails) {
-            // Trying to use @Unroll with a tooling api runner causes NPEs in the test fixtures
-            // Fail early with a message until we can fix this properly.
-            Unroll unroll = testDetails.getAnnotation(Unroll)
-            if (unroll!=null) {
-                throw new IllegalArgumentException("Cannot use @Unroll with " + ToolingApiCompatibilitySuiteRunner.name)
-            }
-
-            if (!gradle.daemonIdleTimeoutConfigurable && OperatingSystem.current().isWindows()) {
-                //Older daemon don't have configurable ttl and they hung for 3 hours afterwards.
-                // This is a real problem on windows due to eager file locking and continuous CI failures.
-                // On linux it's a lesser problem - long-lived daemons hung and steal resources but don't lock files.
-                // So, for windows we'll only run tests against target gradle that supports ttl
-                return false
-            }
-            ToolingApiVersion toolingApiVersion = testDetails.getAnnotation(ToolingApiVersion)
-            if (!toVersionSpec(toolingApiVersion).isSatisfiedBy(toolingApi.version)) {
-                return false
-            }
-            TargetGradleVersion targetGradleVersion = testDetails.getAnnotation(TargetGradleVersion)
-            if (!toVersionSpec(targetGradleVersion).isSatisfiedBy(gradle.version)) {
-                return false
-            }
-
-            return true
-        }
-
-        private Spec<GradleVersion> toVersionSpec(annotation) {
-            if (annotation == null) {
-                return Specs.SATISFIES_ALL
-            }
-            return GradleVersionSpec.toSpec(annotation.value())
-        }
-
-        @Override
-        protected List<? extends Class<?>> loadTargetClasses() {
-            def testClassLoader = getTestClassLoader()
-            return [testClassLoader.loadClass(target.name)]
-        }
-
-        ClassLoader getTestClassLoader() {
-            def testClassPath = []
-            testClassPath << ClasspathUtil.getClasspathForClass(target)
-            testClassPath << ClasspathUtil.getClasspathForClass(TestResultHandler)
-
-            getTestClassLoader(TEST_CLASS_LOADERS, toolingApi, testClassPath) {
-                it.allowResources(target.name.replace('.', '/'))
-            }
-        }
-
-        @Override
-        protected void before() {
-            def testClazz = testClassLoader.loadClass(ToolingApiSpecification.name)
-            testClazz.selectTargetDist(gradle)
+            super(toolingApi, gradle)
         }
     }
 }

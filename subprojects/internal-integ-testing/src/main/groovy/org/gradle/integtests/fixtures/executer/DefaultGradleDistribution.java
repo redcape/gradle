@@ -131,6 +131,11 @@ public class DefaultGradleDistribution implements GradleDistribution {
     }
 
     @Override
+    public boolean isToolingApiIntegratedCompositeSupported() {
+        return isSameOrNewer("2.14-rc-1");
+    }
+
+    @Override
     public boolean isToolingApiLoggingInEmbeddedModeSupported() {
         return isSameOrNewer("2.9-rc-1");
     }

@@ -74,6 +74,8 @@ public interface GradleDistribution {
      */
     boolean isToolingApiNonAsciiOutputSupported();
 
+    boolean isToolingApiIntegratedCompositeSupported();
+
     /**
      * Returns true if the tooling API of this distribution correctly handles logging in embedded mode.
      */

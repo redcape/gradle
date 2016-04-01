@@ -15,6 +15,7 @@
  */
 
 package org.gradle.integtests.tooling.fixture
+
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
 import org.gradle.test.fixtures.file.TestFile
@@ -22,16 +23,21 @@ import org.gradle.tooling.connection.GradleConnection
 import org.gradle.tooling.connection.GradleConnectionBuilder
 import org.gradle.tooling.connection.ModelResult
 import org.gradle.util.GradleVersion
+import org.junit.Assume
 import org.junit.runner.RunWith
 
 @ToolingApiVersion(ToolingApiVersions.SUPPORTS_COMPOSITE_BUILD)
 @TargetGradleVersion(">=1.0")
 @RunWith(CompositeToolingApiCompatibilitySuiteRunner)
 abstract class CompositeToolingApiSpecification extends AbstractToolingApiSpecification {
-    boolean integratedComposite = true
+    private static final ThreadLocal<Boolean> INTEGRATED_COMPOSITE = new ThreadLocal<Boolean>()
 
     void skipIntegratedComposite() {
-        integratedComposite = false
+        Assume.assumeFalse(INTEGRATED_COMPOSITE.get())
+    }
+
+    static void setIntegratedComposite(boolean enable) {
+        INTEGRATED_COMPOSITE.set(enable)
     }
 
     static GradleVersion getTargetDistVersion() {
@@ -55,11 +61,7 @@ abstract class CompositeToolingApiSpecification extends AbstractToolingApiSpecif
 
     GradleConnectionBuilder createCompositeBuilder() {
         def builder = toolingApi.createCompositeBuilder()
-
-        // TODO:DAZ This isn't quite right: we should be performing _both_ integrated and non-integrated tests for this version
-        if (integratedComposite && targetDist.version == GradleVersion.current()) {
-            builder.integratedComposite(true)
-        }
+        builder.integratedComposite(INTEGRATED_COMPOSITE.get())
         return builder
     }
 
