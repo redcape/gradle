@@ -26,14 +26,16 @@ import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.plugins.scala.ScalaBasePlugin
 import org.gradle.internal.reflect.Instantiator
 import org.gradle.internal.xml.XmlTransformer
+import org.gradle.language.scala.plugins.ScalaLanguagePlugin
+import org.gradle.play.plugins.PlayApplicationPlugin
 import org.gradle.plugins.ide.api.XmlFileContentMerger
 import org.gradle.plugins.ide.idea.internal.IdeaNameDeduper
 import org.gradle.plugins.ide.idea.internal.IdeaScalaConfigurer
+import org.gradle.plugins.ide.idea.internal.PlayIdeRules
 import org.gradle.plugins.ide.idea.model.*
 import org.gradle.plugins.ide.internal.IdePlugin
 
 import javax.inject.Inject
-
 /**
  * Adds a GenerateIdeaModule task. When applied to a root project, also adds a GenerateIdeaProject task.
  * For projects that have the Java plugin applied, the tasks receive additional Java-specific configuration.
@@ -118,7 +120,10 @@ class IdeaPlugin extends IdePlugin {
                     }
                 }
 
-                ideaProject.wildcards = ['!?*.java', '!?*.groovy'] as Set
+                ideaProject.wildcards = ['!?*.class',
+                                         '!?*.java',
+                                         '!?*.groovy',
+                                         '!?*.scala'] as Set
                 conventionMapping.map('modules') {
                     project.rootProject.allprojects.findAll { it.plugins.hasPlugin(IdeaPlugin) }.collect {
                         ideaModelFor(it).module
@@ -174,6 +179,9 @@ class IdeaPlugin extends IdePlugin {
         project.plugins.withType(JavaPlugin) {
             configureIdeaModuleForJava(project)
         }
+        project.plugins.withType(PlayApplicationPlugin) {
+            project.pluginManager.apply(PlayIdeRules)
+        }
     }
 
     @CompileStatic(TypeCheckingMode.SKIP)
@@ -225,12 +233,19 @@ class IdeaPlugin extends IdePlugin {
 
     private void configureForScalaPlugin() {
         project.plugins.withType(ScalaBasePlugin) {
-            //see IdeaScalaConfigurer
-            project.tasks.findByName('ideaModule').dependsOn(project.rootProject.tasks.findByName('ideaProject'))
+            ideaModuleDependsOnRoot(project)
+        }
+        project.plugins.withType(ScalaLanguagePlugin) {
+            ideaModuleDependsOnRoot(project)
         }
         if (isRoot(project)) {
             new IdeaScalaConfigurer(project).configure()
         }
+    }
+
+    private void ideaModuleDependsOnRoot(Project project) {
+        //see IdeaScalaConfigurer
+        project.tasks.findByName('ideaModule').dependsOn(project.rootProject.tasks.findByName('ideaProject'))
     }
 
     private static boolean isRoot(Project project) {

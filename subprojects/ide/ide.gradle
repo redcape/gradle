@@ -28,6 +28,7 @@ dependencies {
     compile libraries.slf4j_api
     compile libraries.inject
 
+    compile project(':platformPlay')
     testCompile libraries.xmlunit
     testCompile project(':dependencyManagement')
 }

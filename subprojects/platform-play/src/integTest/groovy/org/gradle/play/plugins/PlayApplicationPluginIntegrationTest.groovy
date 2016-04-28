@@ -39,6 +39,16 @@ class PlayApplicationPluginIntegrationTest extends AbstractIntegrationSpec {
         """
     }
 
+    def "can generate idea"() {
+        given:
+        buildFile << """
+    apply plugin: 'idea'
+"""
+        when:
+        succeeds("idea")
+        then:
+        file("play-app.iml").assertExists()
+    }
     def "cannot register multiple PlayApplicationSpec components"() {
         given:
         buildFile << """
