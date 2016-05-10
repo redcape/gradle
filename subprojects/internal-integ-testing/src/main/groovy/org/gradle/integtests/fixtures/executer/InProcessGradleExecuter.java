@@ -459,7 +459,7 @@ public class InProcessGradleExecuter extends AbstractGradleExecuter {
     }
 
     private static class InProcessExecutionFailure extends InProcessExecutionResult implements ExecutionFailure {
-        private static final Pattern LOCATION_PATTERN = Pattern.compile("(?m)^((\\w+ )+'.+') line: (\\d+)$");
+        private static final Pattern LOCATION_PATTERN = Pattern.compile("(?m)^((\\w+ )+'.+')( line: (\\d+))?$");
         private final OutputScrapingExecutionFailure outputFailure;
         private final GradleException failure;
         private final String fileName;
@@ -472,11 +472,10 @@ public class InProcessGradleExecuter extends AbstractGradleExecuter {
             this.outputFailure = outputFailure;
             this.failure = failure;
 
-            // Chop up the exception message into its expected parts
             java.util.regex.Matcher matcher = LOCATION_PATTERN.matcher(failure.getMessage());
             if (matcher.find()) {
                 fileName = matcher.group(1);
-                lineNumber = matcher.group(3);
+                lineNumber = matcher.group(4);
                 description = failure.getMessage().substring(matcher.end()).trim();
             } else {
                 fileName = "";

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,19 @@
 
 package org.gradle.plugin.use.internal;
 
-import org.gradle.api.Nullable;
-import org.gradle.api.plugins.PluginAware;
-import org.gradle.plugin.internal.PluginId;
+import com.google.common.collect.Lists;
+import org.gradle.plugin.use.PluginDependencySpec;
 
-public interface PluginRequest {
+import java.util.List;
 
-    PluginId getId();
+public class UnsupportedPluginRequestCollector implements PluginRequestCollector {
+    @Override
+    public List<TargetedPluginRequest> getRequests() {
+        return Lists.newArrayList();
+    }
 
-    @Nullable
-    String getVersion();
-
-    String getScriptDisplayName();
-
-    String getDisplayName();
+    @Override
+    public PluginDependencySpec id(String id) {
+        throw new UnsupportedOperationException();
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 the original author or authors.
+ * Copyright 2016 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-package org.gradle.plugin.use.internal;
+package org.gradle.configuration;
 
-import org.gradle.api.Nullable;
-import org.gradle.api.plugins.PluginAware;
-import org.gradle.plugin.internal.PluginId;
+import org.gradle.api.internal.project.ProjectInternal;
+import org.gradle.groovy.scripts.BasicScript;
 
-public interface PluginRequest {
+public class InitialPassProjectScriptTarget extends ProjectScriptTarget {
+    public InitialPassProjectScriptTarget(ProjectInternal target) {
+        super(target);
+    }
 
-    PluginId getId();
-
-    @Nullable
-    String getVersion();
-
-    String getScriptDisplayName();
-
-    String getDisplayName();
+    @Override
+    public Class<? extends BasicScript> getScriptClass() {
+        return InitialPassProjectScript.class;
+    }
 }

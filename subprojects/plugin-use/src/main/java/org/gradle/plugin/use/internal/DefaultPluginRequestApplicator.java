@@ -21,7 +21,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.gradle.api.Action;
 import org.gradle.api.GradleException;
-import org.gradle.api.Nullable;
 import org.gradle.api.Transformer;
 import org.gradle.api.artifacts.dsl.RepositoryHandler;
 import org.gradle.api.artifacts.repositories.ArtifactRepository;
@@ -38,10 +37,10 @@ import org.gradle.api.plugins.UnknownPluginException;
 import org.gradle.api.specs.Spec;
 import org.gradle.internal.classpath.ClassPath;
 import org.gradle.internal.exceptions.LocationAwareException;
-import org.gradle.plugin.repository.internal.PluginRepositoryRegistry;
 import org.gradle.plugin.internal.PluginId;
 import org.gradle.plugin.repository.PluginRepository;
 import org.gradle.plugin.repository.internal.BackedByArtifactRepository;
+import org.gradle.plugin.repository.internal.PluginRepositoryRegistry;
 import org.gradle.plugin.use.resolve.internal.NotNonCorePluginOnClasspathCheckPluginResolver;
 import org.gradle.plugin.use.resolve.internal.PluginResolution;
 import org.gradle.plugin.use.resolve.internal.PluginResolutionResult;
@@ -58,6 +57,7 @@ import java.util.Set;
 
 import static org.gradle.util.CollectionUtils.any;
 import static org.gradle.util.CollectionUtils.collect;
+import static org.gradle.util.CollectionUtils.toSet;
 
 public class DefaultPluginRequestApplicator implements PluginRequestApplicator {
     private final PluginRegistry pluginRegistry;
@@ -70,19 +70,21 @@ public class DefaultPluginRequestApplicator implements PluginRequestApplicator {
         this.pluginRepositoryRegistry = pluginRepositoryRegistry;
     }
 
-    public void applyPlugins(PluginRequests requests, final ScriptHandlerInternal scriptHandler, @Nullable final PluginManagerInternal target, ClassLoaderScope classLoaderScope) {
-        if (requests.isEmpty()) {
+    public void applyPlugins(final List<TargetedPluginRequest> targetedRequests, final ScriptHandlerInternal scriptHandler, ClassLoaderScope classLoaderScope) {
+        if (targetedRequests.isEmpty()) {
             defineScriptHandlerClassScope(scriptHandler, classLoaderScope, Collections.<PluginImplementation<?>>emptyList());
             return;
         }
 
-        if (target == null) {
-            throw new IllegalStateException("Plugin target is 'null' and there are plugin requests");
-        }
-
         final PluginResolver effectivePluginResolver = wrapInNotInClasspathCheck(classLoaderScope);
 
-        List<Result> results = collect(requests, new Transformer<Result, PluginRequest>() {
+        Set<PluginRequest> requests = toSet(collect(targetedRequests, new Transformer<PluginRequest, TargetedPluginRequest>() {
+            @Override
+            public PluginRequest transform(TargetedPluginRequest targetedPluginRequest) {
+                return targetedPluginRequest.getRequest();
+            }
+        }));
+        Set<Result> results = collect(requests, new Transformer<Result, PluginRequest>() {
             public Result transform(PluginRequest request) {
                 return resolveToFoundResult(effectivePluginResolver, request);
             }
@@ -165,20 +167,28 @@ public class DefaultPluginRequestApplicator implements PluginRequestApplicator {
         for (final Map.Entry<Result, PluginId> entry : legacyActualPluginIds.entrySet()) {
             final PluginRequest request = entry.getKey().request;
             final PluginId id = entry.getValue();
-            applyPlugin(request, id, new Runnable() {
-                public void run() {
-                    target.apply(id.toString());
+            for (final TargetedPluginRequest targetedPluginRequest : targetedRequests) {
+                if (targetedPluginRequest.getRequest().getId().equals(id)) {
+                    applyPlugin(request, id, new Runnable() {
+                        public void run() {
+                            targetedPluginRequest.getTarget().getPluginManager().apply(id.toString());
+                        }
+                    });
                 }
-            });
+            }
         }
 
         for (final Map.Entry<Result, PluginImplementation<?>> entry : Iterables.concat(pluginImpls.entrySet(), pluginImplsFromOtherLoaders.entrySet())) {
             final Result result = entry.getKey();
-            applyPlugin(result.request, result.found.getPluginId(), new Runnable() {
-                public void run() {
-                    target.apply(entry.getValue());
+            for (final TargetedPluginRequest targetedPluginRequest : targetedRequests) {
+                if (targetedPluginRequest.getRequest().getId().equals(result.request.getId())) {
+                    applyPlugin(result.request, result.found.getPluginId(), new Runnable() {
+                        public void run() {
+                            ((PluginManagerInternal) targetedPluginRequest.getTarget().getPluginManager()).apply(entry.getValue());
+                        }
+                    });
                 }
-            });
+            }
         }
     }
 
@@ -216,7 +226,7 @@ public class DefaultPluginRequestApplicator implements PluginRequestApplicator {
                 throw new InvalidPluginException(String.format("An exception occurred applying plugin request %s", request), e);
             }
         } catch (Exception e) {
-            throw new LocationAwareException(e, request.getScriptDisplayName(), request.getLineNumber());
+            throw new LocationAwareException(e, request.getScriptDisplayName(), null);
         }
     }
 
@@ -227,13 +237,13 @@ public class DefaultPluginRequestApplicator implements PluginRequestApplicator {
         } catch (Exception e) {
             throw new LocationAwareException(
                 new GradleException(String.format("Error resolving plugin %s", request.getDisplayName()), e),
-                request.getScriptDisplayName(), request.getLineNumber());
+                request.getScriptDisplayName(), null);
         }
 
         if (!result.isFound()) {
             String message = buildNotFoundMessage(request, result);
             Exception exception = new UnknownPluginException(message);
-            throw new LocationAwareException(exception, request.getScriptDisplayName(), request.getLineNumber());
+            throw new LocationAwareException(exception, request.getScriptDisplayName(), null);
         }
 
         return result;

@@ -64,7 +64,6 @@ class CorePluginUseIntegrationSpec extends AbstractIntegrationSpec {
         failure.assertHasDescription("Error resolving plugin [id: 'java', version: '1.0']")
         failure.assertHasCause("Plugin 'java' is a core Gradle plugin, which cannot be specified with a version number")
         failure.assertHasFileName("Build file '$buildFile.absolutePath'")
-        failure.assertHasLineNumber(3)
     }
 
     void "qualified core plugins cannot have a version number"() {
@@ -82,7 +81,6 @@ class CorePluginUseIntegrationSpec extends AbstractIntegrationSpec {
         failure.assertHasDescription("Error resolving plugin [id: 'org.gradle.java', version: '1.0']")
         failure.assertHasCause("Plugin 'org.gradle.java' is a core Gradle plugin, which cannot be specified with a version number")
         failure.assertHasFileName("Build file '$buildFile.absolutePath'")
-        failure.assertHasLineNumber(3)
     }
 
     def "cant ask for same plugin twice"() {
@@ -98,9 +96,8 @@ class CorePluginUseIntegrationSpec extends AbstractIntegrationSpec {
         fails "tasks"
 
         then:
-        failure.assertThatDescription(startsWith("Plugin with id 'java' was already requested at line 3"))
+        failure.assertThatDescription(startsWith("Plugin with id 'java' was already requested in build file '${buildFile}'"))
         failure.assertHasFileName("Build file '$buildFile.absolutePath'")
-        failure.assertHasLineNumber(4)
     }
 
     def "can reapply core plugin applied via plugins block"() {

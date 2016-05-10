@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
-package org.gradle.plugin.use.internal;
+package org.gradle.configuration;
 
+import groovy.lang.Closure;
+import org.gradle.api.internal.ClosureBackedAction;
+import org.gradle.api.internal.project.ProjectScript;
 import org.gradle.plugin.use.PluginDependenciesSpec;
+import org.gradle.plugin.use.ProjectPluginDependenciesSpec;
 
-import java.util.List;
+public abstract class InitialPassProjectScript extends ProjectScript {
+    public void plugins(Closure configClosure) {
+        new ClosureBackedAction<PluginDependenciesSpec>(configClosure, Closure.DELEGATE_ONLY, false).execute(__scriptServices.get(PluginDependenciesSpec.class));
+    }
 
-public interface PluginRequestCollector extends PluginDependenciesSpec {
-    List<TargetedPluginRequest> getRequests();
 }
