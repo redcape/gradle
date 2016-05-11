@@ -69,111 +69,11 @@ public class DefaultSslContextFactory implements SslContextFactory {
     private static class SslContextCacheLoader extends CacheLoader<Map<String, String>, SSLContext> {
         @Override
         public SSLContext load(Map<String, String> props) {
-            // This implementation is borrowed from the Apache HttpClient project
-            // https://github.com/apache/httpclient/blob/4.2.2/httpclient/src/main/java/org/apache/http/conn/ssl/SSLSocketFactory.java#L246-L354
             try {
-                TrustManagerFactory tmFactory;
-
-                String trustAlgorithm = props.get("ssl.TrustManagerFactory.algorithm");
-                if (trustAlgorithm == null) {
-                    trustAlgorithm = TrustManagerFactory.getDefaultAlgorithm();
-                }
-                String trustStoreType = props.get("javax.net.ssl.trustStoreType");
-                if (trustStoreType == null) {
-                    trustStoreType = KeyStore.getDefaultType();
-                }
-                if ("none".equalsIgnoreCase(trustStoreType)) {
-                    tmFactory = TrustManagerFactory.getInstance(trustAlgorithm);
-                } else {
-                    File trustStoreFile;
-                    String s = props.get("javax.net.ssl.trustStore");
-                    if (s != null) {
-                        trustStoreFile = new File(s);
-                        tmFactory = TrustManagerFactory.getInstance(trustAlgorithm);
-                        String trustStoreProvider = props.get("javax.net.ssl.trustStoreProvider");
-                        KeyStore trustStore;
-                        if (trustStoreProvider != null) {
-                            trustStore = KeyStore.getInstance(trustStoreType, trustStoreProvider);
-                        } else {
-                            trustStore = KeyStore.getInstance(trustStoreType);
-                        }
-                        String trustStorePassword = props.get("javax.net.ssl.trustStorePassword");
-                        FileInputStream instream = new FileInputStream(trustStoreFile);
-                        try {
-                            trustStore.load(instream, trustStorePassword != null ? trustStorePassword.toCharArray() : EMPTY_PASSWORD);
-                        } finally {
-                            instream.close();
-                        }
-                        tmFactory.init(trustStore);
-                    } else {
-                        File javaHome = new File(props.get("java.home"));
-                        File file = new File(javaHome, "lib/security/jssecacerts");
-                        if (!file.exists()) {
-                            file = new File(javaHome, "lib/security/cacerts");
-                            trustStoreFile = file;
-                        } else {
-                            trustStoreFile = file;
-                        }
-                        tmFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                        KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-                        String trustStorePassword = props.get("javax.net.ssl.trustStorePassword");
-                        FileInputStream instream = new FileInputStream(trustStoreFile);
-                        try {
-                            trustStore.load(instream, trustStorePassword != null ? trustStorePassword.toCharArray() : null);
-                        } finally {
-                            instream.close();
-                        }
-                        tmFactory.init(trustStore);
-                    }
-                }
-
-                KeyManagerFactory kmFactory = null;
-                String keyAlgorithm = props.get("ssl.KeyManagerFactory.algorithm");
-                if (keyAlgorithm == null) {
-                    keyAlgorithm = KeyManagerFactory.getDefaultAlgorithm();
-                }
-                String keyStoreType = props.get("javax.net.ssl.keyStoreType");
-                if (keyStoreType == null) {
-                    keyStoreType = KeyStore.getDefaultType();
-                }
-                if ("none".equalsIgnoreCase(keyStoreType)) {
-                    kmFactory = KeyManagerFactory.getInstance(keyAlgorithm);
-                } else {
-                    File keyStoreFile = null;
-                    String s = props.get("javax.net.ssl.keyStore");
-                    if (s != null) {
-                        keyStoreFile = new File(s);
-                    }
-                    if (keyStoreFile != null) {
-                        kmFactory = KeyManagerFactory.getInstance(keyAlgorithm);
-                        String keyStoreProvider = props.get("javax.net.ssl.keyStoreProvider");
-                        KeyStore keyStore;
-                        if (keyStoreProvider != null) {
-                            keyStore = KeyStore.getInstance(keyStoreType, keyStoreProvider);
-                        } else {
-                            keyStore = KeyStore.getInstance(keyStoreType);
-                        }
-                        String keyStorePassword = props.get("javax.net.ssl.keyStorePassword");
-                        FileInputStream instream = new FileInputStream(keyStoreFile);
-                        try {
-                            keyStore.load(instream, keyStorePassword != null ? keyStorePassword.toCharArray() : EMPTY_PASSWORD);
-                        } finally {
-                            instream.close();
-                        }
-                        kmFactory.init(keyStore, keyStorePassword != null ? keyStorePassword.toCharArray() : EMPTY_PASSWORD);
-                    }
-                }
-
-                SSLContext sslcontext = SSLContext.getInstance("TLS");
-                sslcontext.init(
-                    kmFactory != null ? kmFactory.getKeyManagers() : null,
-                    tmFactory != null ? tmFactory.getTrustManagers() : null,
-                    null);
+                SSLContext sslcontext = SSLContext.getDefault();
 
                 return sslcontext;
             } catch (GeneralSecurityException e) {
-                throw new SSLInitializationException(e.getMessage(), e);
-            } catch (IOException e) {
                 throw new SSLInitializationException(e.getMessage(), e);
             }
         }
